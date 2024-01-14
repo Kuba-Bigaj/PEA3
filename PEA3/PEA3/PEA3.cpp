@@ -20,6 +20,7 @@ class App {
 	//algorith-specific data storage
 	int run_limit = 20;				//in seconds
 	int population_size = 50;
+	int mutation_method = 0;
 
 
 	//static UI helper functions
@@ -122,7 +123,7 @@ class App {
 	void alloc_matrix(int s) //allocates the matrix
 	{
 		size = s;
-		matrix = new int*[s];
+		matrix = new int* [s];
 		for (int i = 0; i < s; i++)
 		{
 			matrix[i] = new int[s];
@@ -239,12 +240,15 @@ class App {
 		int len = 0;
 		for (int i = 1; i < size; i++)
 		{
+			int a = solution[i - 1];
+			int b = solution[i];
 			len += matrix[solution[i - 1]][solution[i]];
 		}
 		len += matrix[solution[size - 1]][solution[0]];
 		return len;
 	}
 
+	//generates a random double between 0 and 1
 	double generate_random_double()
 	{
 		return (double)((double)rand() / (double)RAND_MAX);
@@ -275,12 +279,12 @@ class App {
 	}
 
 	//mutations
-	void mutate_transposition(int * specimen, int a, int b)
+	void mutate_transposition(int* specimen, int a, int b)
 	{
 		std::swap(specimen[a], specimen[b]);
 	}
 
-	void mutate_inversion(int * specimen, int a, int b)
+	void mutate_inversion(int* specimen, int a, int b)
 	{
 		if (a == b)
 			return;
@@ -298,12 +302,28 @@ class App {
 		delete copy;
 	}
 
+	void mutate(int* specimen)
+	{
+		int a = rand() % size, b = a + (rand() % (size - a));
+		switch (mutation_method)
+		{
+		case 0:
+			mutate_transposition(specimen, a, b);
+			break;
+		case 1:
+			mutate_inversion(specimen, a, b);
+			break;
+		default:
+			return;
+		}
+
+	}
 	//crossovers
 
 	int PMX_find_index(int* parent1, int* parent2, int a, int b, int p2_index)
 	{
 		int target_value = parent1[p2_index];
-		int new_index;
+		int new_index = 0;
 		for (int i = 0; i < size; i++)
 		{
 			if (parent2[i] == target_value)
@@ -339,7 +359,9 @@ class App {
 		for (int i = a; i < b; i++)
 		{
 			if (visited[parent2[i]]) //skip cities already in the child
+			{
 				continue;
+			}
 
 			visited[parent2[i]] = true;
 			child[PMX_find_index(parent1, parent2, a, b, i)] = parent2[i]; //find the correct index
@@ -347,9 +369,9 @@ class App {
 
 		for (int i = 0; i < size; i++)
 		{
-			if (!visited[i])
+			if (!visited[parent2[i]])
 			{
-				visited[i] = true;
+				visited[parent2[i]] = true;
 				child[i] = parent2[i];
 			}
 		}
@@ -361,34 +383,38 @@ class App {
 	/*
 		simple insertion sort
 		solutions: [populations_size] x solutions of length [size]
+		fitness: fitness values for the solutions, bigger is better
 	*/
-	void order_solutions(int** solutions)
+	void order_solutions(int** solutions, double* fitness)
 	{
-		int index, min = INT_MAX;
-		int* sizes = new int[population_size];
+		int index;
+		double max;
 
 		for (int i = 0; i < population_size; i++)
 		{
-			sizes[i] = path_len(solutions[i]);
+			fitness[i] = 1.0 / (double)path_len(solutions[i]);
 		}
 
 
 		for (int i = 0; i < population_size; i++)
 		{
-			min = INT_MAX;
+			max = -1e7;
 			for (int j = i; j < population_size; j++)
 			{
-				if (sizes[j] < min)
+				if (fitness[j] > max)
 				{
-					min = sizes[j];
+					max = fitness[j];
 					index = j;
 				}
 			}
 			std::swap(solutions[i], solutions[index]);
-			std::swap(sizes[i], sizes[index]);
+			std::swap(fitness[i], fitness[index]);
 		}
 
-		delete sizes;
+		/*for (int i = 0; i < population_size; i++)
+		{
+			std::cout <<path_len(solutions[i])<<"\t"<< fitness[i] << "\t" << str_path(solutions[i]) << "\n";
+		}*/
 	}
 
 	//algorithms
@@ -433,44 +459,97 @@ class App {
 	int* genetic()
 	{
 		//declare / init
-		int** population = new int*[population_size];
+		int** population = new int* [population_size];
 		for (int i = 0; i < population_size; i++)
 		{
 			population[i] = generate_random_path();
 		}
+		double* fitness = new double[population_size];
 		int* best_solution = new int[size];
-		int best_len = INT_MAX;
-		
+		double best_fit = -1e7;
+		int* child;
+		int num_of_children = (int)(0.8 * population_size);
+		double total_fitness, pointer_distance, offset;
+		int* parents = new int[num_of_children];
+
+		int num = 0;
 		auto start = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<double> elapsed;
 
 		do
 		{
 			//evaluate solutions
-			order_solutions(population);
-			if (path_len(population[0]) < best_len) //save the best one
+			order_solutions(population, fitness);
+			if (fitness[0] > best_fit) //save the best one
 			{
 				copy_arr(population[0], best_solution);
-				best_len = path_len(population[0]);
+				best_fit = fitness[0];
 			}
 
-			//select parents
+			//select parents using Stochastic Uniform Selection
+			total_fitness = 0;
+			for (int i = 0; i < population_size; i++)
+			{
+				total_fitness += fitness[i];
+			}
+			pointer_distance = total_fitness / num_of_children;
+			offset = generate_random_double() * pointer_distance;
+			for (int i = 0; i < num_of_children; i++)
+			{
+				int j = 0;
+				double partial_sum = fitness[0];
+				double goal = (pointer_distance * i) + offset;
+				while (partial_sum < goal)
+				{
+					//somewhere here 
+					j++;
+					partial_sum += fitness[j];
+				}
+				if (j > 55)
+				{
+					std::cout << "Here\n";
+					for (int h = 0; h < population_size; h++)
+					{
+						std::cout << fitness[h] << "\n";
+					}
+					std::cout<<1+2;
+
+				}
+				
+				parents[i] = j;
+			}
 
 			//procreate among parents
+			for (int i = 0; i < num_of_children; i++)
+			{
+				int a = rand() % size, b = a + (rand() % (size - a));
+				int p1 = parents[i], p2 = rand() % population_size;
+				child = crossover_PMX(population[p1], population[p2], a, b);
 
-			//mutate
+				//mutate
+				if (generate_random_double() < 0.1)
+				{
+					mutate(child);
+				}
+
+				copy_arr(child, population[p1]);
+
+				delete  child;
+			}
 
 			//succeed
-
+			//succesion is applied through the death of parents and perserverence of the infertile
 
 			elapsed = std::chrono::high_resolution_clock::now() - start;
-		} while (elapsed.count() < 20);
+		} while (elapsed.count() < run_limit);
 
 		for (int i = 0; i < population_size; i++)
 		{
 			delete population[i];
 		}
 		delete population;
+		delete fitness;
+		delete parents;
 		return best_solution;
 	}
 
@@ -591,21 +670,20 @@ public:
 		read_data_from_file("ftv55.atsp");
 		//run_limit = 180;
 		//std::cout << path_len(greedy()) << "\n";
-
-		int** sol = new int*[population_size];
-		for (int i = 0; i < population_size; i++)
-		{
-			sol[i] = generate_random_path();
-		}
-
-		order_solutions(sol);
+		int* sol = genetic();
+		//int* p1 = generate_random_path();
+		//int* p2 = generate_random_path();
+		//std::cout << str_path(crossover_PMX(p1, p2, 20, 48));
+		std::cout << "path_len: " << path_len(sol) << "\n";
+		std::cout << "path: " << str_path(sol) << "\n";
 	}
 };
 
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-	srand(time(NULL));
+	//srand(time(NULL)); //1705058225 - breaks
+	srand(1705058225);
 	App a;
 	if (argc > 1)
 	{
