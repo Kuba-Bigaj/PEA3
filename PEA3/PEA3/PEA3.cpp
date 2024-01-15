@@ -274,7 +274,7 @@ class App {
 			solution[i] = cur_v;
 		}
 
-		delete vis;
+		delete[] vis;
 		return solution;
 	}
 
@@ -299,7 +299,7 @@ class App {
 			specimen[min + i] = copy[max - i];
 		}
 
-		delete copy;
+		delete[] copy;
 	}
 
 	void mutate(int* specimen)
@@ -376,7 +376,7 @@ class App {
 			}
 		}
 
-		delete visited;
+		delete[] visited;
 		return child;
 	}
 
@@ -392,13 +392,12 @@ class App {
 
 		for (int i = 0; i < population_size; i++)
 		{
-			fitness[i] = 1.0 / (double)path_len(solutions[i]);
+			fitness[i] = 1.0 / path_len(solutions[i]);
 		}
-
 
 		for (int i = 0; i < population_size; i++)
 		{
-			max = -1e7;
+			double max = -1.0;
 			for (int j = i; j < population_size; j++)
 			{
 				if (fitness[j] > max)
@@ -410,11 +409,6 @@ class App {
 			std::swap(solutions[i], solutions[index]);
 			std::swap(fitness[i], fitness[index]);
 		}
-
-		/*for (int i = 0; i < population_size; i++)
-		{
-			std::cout <<path_len(solutions[i])<<"\t"<< fitness[i] << "\t" << str_path(solutions[i]) << "\n";
-		}*/
 	}
 
 	//algorithms
@@ -466,7 +460,7 @@ class App {
 		}
 		double* fitness = new double[population_size];
 		int* best_solution = new int[size];
-		double best_fit = -1e7;
+		double best_fit = -1;
 		int* child;
 		int num_of_children = (int)(0.8 * population_size);
 		double total_fitness, pointer_distance, offset;
@@ -487,43 +481,34 @@ class App {
 			}
 
 			//select parents using Stochastic Uniform Selection
-			total_fitness = 0;
+			total_fitness = 0.0;
 			for (int i = 0; i < population_size; i++)
 			{
 				total_fitness += fitness[i];
 			}
 			pointer_distance = total_fitness / num_of_children;
-			offset = generate_random_double() * pointer_distance;
+			offset = (int)(generate_random_double() * (double)pointer_distance);
 			for (int i = 0; i < num_of_children; i++)
 			{
 				int j = 0;
-				double partial_sum = fitness[0];
-				double goal = (pointer_distance * i) + offset;
+				double partial_sum = 0;
+				double goal = (pointer_distance * (i)) + offset;
 				while (partial_sum < goal)
 				{
-					//somewhere here 
-					j++;
 					partial_sum += fitness[j];
+					j++;
 				}
-				if (j > 55)
-				{
-					std::cout << "Here\n";
-					for (int h = 0; h < population_size; h++)
-					{
-						std::cout << fitness[h] << "\n";
-					}
-					std::cout<<1+2;
-
-				}
-				
 				parents[i] = j;
 			}
 
 			//procreate among parents
 			for (int i = 0; i < num_of_children; i++)
 			{
-				int a = rand() % size, b = a + (rand() % (size - a));
-				int p1 = parents[i], p2 = rand() % population_size;
+				int a = rand() % size, b = rand() % size;
+				int min = a < b ? a : b;
+				int max = a > b ? a : b;
+				int p1 = parents[i];
+				int p2 = parents[rand() % num_of_children];
 				child = crossover_PMX(population[p1], population[p2], a, b);
 
 				//mutate
@@ -534,11 +519,11 @@ class App {
 
 				copy_arr(child, population[p1]);
 
-				delete  child;
+				delete[] child;
 			}
 
 			//succeed
-			//succesion is applied through the death of parents and perserverence of the infertile
+				//succesion is applied through the death of parents and perserverence of the infertile
 
 			elapsed = std::chrono::high_resolution_clock::now() - start;
 		} while (elapsed.count() < run_limit);
@@ -547,9 +532,9 @@ class App {
 		{
 			delete population[i];
 		}
-		delete population;
-		delete fitness;
-		delete parents;
+		delete[] population;
+		delete[] fitness;
+		delete[] parents;
 		return best_solution;
 	}
 
@@ -612,7 +597,7 @@ class App {
 
 		std::cout << "Read path has a length of " << path_len(path) << "\n";
 
-		delete path;
+		delete[] path;
 		system("pause");
 	}
 
@@ -667,29 +652,27 @@ public:
 
 	void debug()
 	{
+
 		read_data_from_file("ftv55.atsp");
-		//run_limit = 180;
-		//std::cout << path_len(greedy()) << "\n";
-		int* sol = genetic();
-		//int* p1 = generate_random_path();
-		//int* p2 = generate_random_path();
-		//std::cout << str_path(crossover_PMX(p1, p2, 20, 48));
-		std::cout << "path_len: " << path_len(sol) << "\n";
-		std::cout << "path: " << str_path(sol) << "\n";
+		run_limit = 10;
+		for (int i = 0; i < 10; i++)
+		{
+			int* sol = genetic();
+			std::cout << path_len(sol) << "\n";
+			delete[] sol;
+		}
 	}
 };
 
 
 int main(int argc, char* argv[])
 {
-	//srand(time(NULL)); //1705058225 - breaks
-	srand(1705058225);
+	srand(time(NULL));
 	App a;
-	if (argc > 1)
+	for (int i = 0; i < argc; i++)
 	{
-		if (strcmp(argv[1], "-t") == 0)
+		if (strcmp(argv[i], "-t") == 0)
 		{
-			std::cout << "Test would be run...\nIf I had any!\n";
 			system("pause");
 			return 0;
 		}
