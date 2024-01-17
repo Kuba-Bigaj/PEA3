@@ -21,6 +21,8 @@ class App {
 	int run_limit = 20;				//in seconds
 	int population_size = 50;
 	int mutation_method = 0;
+	double mutation_chance = 0.01;
+	double breeding_coefficient = 0.8;
 
 
 	//static UI helper functions
@@ -136,7 +138,7 @@ class App {
 		system("pause");
 	}
 
-	std::string str_path(int* solution)
+	std::string path_str(int* solution)
 	{
 		std::string output;
 		output += std::to_string(solution[0]);
@@ -462,7 +464,7 @@ class App {
 		int* best_solution = new int[size];
 		double best_fit = -1;
 		int* child;
-		int num_of_children = (int)(0.8 * population_size);
+		int num_of_children = (int)(breeding_coefficient * population_size);
 		double total_fitness, pointer_distance, offset;
 		int* parents = new int[num_of_children];
 
@@ -512,7 +514,7 @@ class App {
 				child = crossover_PMX(population[p1], population[p2], a, b);
 
 				//mutate
-				if (generate_random_double() < 0.1)
+				if (generate_random_double() < mutation_chance)
 				{
 					mutate(child);
 				}
@@ -601,17 +603,68 @@ class App {
 		system("pause");
 	}
 
+	void set_pop_size()
+	{
+		int pop_size;
+		std::cout << "Enter a new population size (integer): ";
+		std::cin >> pop_size;
+		if (test_input_validity("ERROR - not an integer!"))
+			population_size = pop_size;
+
+		system("cls");
+		std::cout << "Population size: " << population_size << "\n";
+		system("pause");
+	}
+
+	void set_mut_method()
+	{
+		std::string options[2] = { "Swap mutation", "Inversion mutation" };
+		std::string details[2] = { "Mutates the subject by randomly exchanging the position of two of its vertices", "Mutates the subject by inverisng the sequence of its vertices between two randomly selected vertices" };
+		mutation_method = create_adaptive_sub_menu("Choose a new mutation method:\n", options, details, 2, mutation_method);
+		system("cls");
+		std::cout << "Chosen method: " << options[mutation_method] << "\n";
+		system("pause");
+	}
+
+	void set_mut_chance()
+	{
+		double mut_chance;
+		std::cout << "Enter a new mutation chance (double): ";
+		std::cin >> mut_chance;
+		if (test_input_validity("ERROR - not a double!"))
+			mutation_chance = mut_chance;
+
+		system("cls");
+		std::cout << "Mutation chance: " << mutation_chance << "\n";
+		system("pause");
+	}
+
+	void set_breeding_coeff()
+	{
+		double breed_coeff;
+		std::cout << "Enter a new breeding coefficient (double) [determines what percentage of the population will be selected for procreation]: ";
+		std::cin >> breed_coeff;
+		if (test_input_validity("ERROR - not a double!"))
+			breeding_coefficient = breed_coeff;
+
+		system("cls");
+		std::cout << "Breeding coefficient: " << breeding_coefficient << "\n";
+		system("pause");
+	}
+
 public:
 	void run()
 	{
 		std::string title = "MAIN MENU\n";
 		std::string credits = "Kuba Bigaj 2023\n";
-		std::string options[10] = { "Load data", "Show current data","Set stop conditions", "Simulated annealing", "[SA] Set cooling schedule","[SA] Set cooling coefficient", "Taboo Search", "[TS] Set neighbourhood definition", "Read path from text file",  "Exit" };
+		std::string options[9] = { "Load data", "Show current data","Run the genetic algorithm", "Set stop conditions", "Set population size", "Set mutation method", "Set mutation chance", "Set breeding coefficient", "Exit" };
 		int chosen_option = 0;
+
+		int* sol;
 
 		while (true)
 		{
-			chosen_option = create_sub_menu(title, options, credits, 10, chosen_option);
+			chosen_option = create_sub_menu(title, options, credits, 9, chosen_option);
 
 			switch (chosen_option)
 			{
@@ -622,27 +675,28 @@ public:
 				show_data();
 				break;
 			case 2:
-				set_stop_conditions();
+				system("cls");
+				std::cout << "Running the genetic algorithm...\n";
+				sol = genetic();
+				std::cout << "Path length: " << path_len(sol) << "\nPath:\n" << path_str(sol)<<"\n";
+				system("pause");
 				break;
 			case 3:
-				system("pause");
+				set_stop_conditions();
 				break;
 			case 4:
-				system("pause");
+				set_pop_size();
 				break;
 			case 5:
-				system("pause");
+				set_mut_method();
 				break;
 			case 6:
-				system("pause");
+				set_mut_chance();
 				break;
 			case 7:
-				system("pause");
+				set_breeding_coeff();
 				break;
 			case 8:
-				read_path_from_file();
-				break;
-			case 9:
 				return;
 			default:
 				break;
@@ -652,15 +706,8 @@ public:
 
 	void debug()
 	{
-
 		read_data_from_file("ftv55.atsp");
-		run_limit = 10;
-		for (int i = 0; i < 10; i++)
-		{
-			int* sol = genetic();
-			std::cout << path_len(sol) << "\n";
-			delete[] sol;
-		}
+		genetic();
 	}
 };
 
@@ -677,7 +724,7 @@ int main(int argc, char* argv[])
 			return 0;
 		}
 	}
-	//a.run();
-	a.debug();
+	a.run();
+	//a.debug();
 	return 0;
 }
