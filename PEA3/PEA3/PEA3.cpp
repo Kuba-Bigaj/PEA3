@@ -480,6 +480,9 @@ class App {
 			{
 				copy_arr(population[0], best_solution);
 				best_fit = fitness[0];
+
+				change_times.push_back(elapsed.count());
+				change_vals.push_back(path_len(best_solution));
 			}
 
 			//select parents using Stochastic Uniform Selection
@@ -678,7 +681,7 @@ public:
 				system("cls");
 				std::cout << "Running the genetic algorithm...\n";
 				sol = genetic();
-				std::cout << "Path length: " << path_len(sol) << "\nPath:\n" << path_str(sol)<<"\n";
+				std::cout << "Path length: " << path_len(sol) << "\nPath:\n" << path_str(sol) << "\n";
 				system("pause");
 				break;
 			case 3:
@@ -709,6 +712,133 @@ public:
 		read_data_from_file("ftv55.atsp");
 		genetic();
 	}
+
+	void run_tests_1()
+	{
+		std::cout << "testing populations sizes...\n";
+		//test for three diffrent population sizes and two diffrent mutation methods
+		//all results must be accesible as an ordered collection of pairs of when was the current best solution found and its length
+
+		std::fstream file;
+		std::string filename;
+
+		int sizes[3] = { 200, 400, 800 };
+
+		read_data_from_file("rbg403.atsp");
+		run_limit = 180;
+		mutation_method = 0;
+		for (int i = 0; i < 3; i++)
+		{
+			population_size = sizes[i];
+			filename = std::to_string(sizes[i]) + "_swap.txt";
+			delete genetic();
+			file.open(filename, std::fstream::out);
+			for (int i = 0; i < change_times.size(); i++)
+			{
+				file << change_times[i] << "; ";
+			}
+			file << "\n";
+			for (int i = 0; i < change_vals.size(); i++)
+			{
+				file << change_vals[i] << "; ";
+			}
+			file << "\n";
+			file.close();
+			change_times.clear();
+			change_vals.clear();
+		}
+
+		std::cout << "swap done!\n";
+
+		mutation_method = 1;
+		for (int i = 0; i < 3; i++)
+		{
+			population_size = sizes[i];
+			filename = std::to_string(sizes[i]) + "_invert.txt";
+			delete genetic();
+			file.open(filename, std::fstream::out);
+			for (int i = 0; i < change_times.size(); i++)
+			{
+				file << change_times[i] << "; ";
+			}
+			file << "\n";
+			for (int i = 0; i < change_vals.size(); i++)
+			{
+				file << change_vals[i] << "; ";
+			}
+			file << "\n";
+			file.close();
+			change_times.clear();
+			change_vals.clear();
+		}
+
+		std::cout << "invert done!\n";
+
+	}
+
+	void run_tests_2()
+	{
+		std::cout << "testing mutations...\n";
+		//later, for the best population size, analize diffrent mutation probabilities : [0.02, 0.05, 0.1]
+		//all results must be accesible as an ordered collection of pairs of when was the current best solution found and its length
+
+		std::fstream file;
+		std::string filename;
+
+		double mutations[3] = { 0.02, 0.05, 0.1 };
+
+		read_data_from_file("rbg403.atsp");
+		run_limit = 180;
+		population_size = 800;
+		mutation_method = 0; 
+		for (int i = 0; i < 3; i++)
+		{
+			mutation_chance = mutations[i];
+			filename = std::to_string((int)(mutations[i]*100)) + "percent_swap.txt";
+			delete genetic();
+			file.open(filename, std::fstream::out);
+			for (int i = 0; i < change_times.size(); i++)
+			{
+				file << change_times[i] << "; ";
+			}
+			file << "\n";
+			for (int i = 0; i < change_vals.size(); i++)
+			{
+				file << change_vals[i] << "; ";
+			}
+			file << "\n";
+			file.close();
+			change_times.clear();
+			change_vals.clear();
+		}
+
+		std::cout << "swap done!\n";
+
+		mutation_method = 1;
+		for (int i = 0; i < 3; i++)
+		{
+			mutation_chance = mutations[i];
+			filename = std::to_string((int)(mutations[i] * 100)) + "percent_swap.txt";
+			delete genetic();
+			file.open(filename, std::fstream::out);
+			for (int i = 0; i < change_times.size(); i++)
+			{
+				file << change_times[i] << "; ";
+			}
+			file << "\n";
+			for (int i = 0; i < change_vals.size(); i++)
+			{
+				file << change_vals[i] << "; ";
+			}
+			file << "\n";
+			file.close();
+			change_times.clear();
+			change_vals.clear();
+		}
+
+		std::cout << "invert done!\n";
+
+	}
 };
 
 
@@ -718,8 +848,15 @@ int main(int argc, char* argv[])
 	App a;
 	for (int i = 0; i < argc; i++)
 	{
-		if (strcmp(argv[i], "-t") == 0)
+		if (strcmp(argv[i], "-1") == 0)
 		{
+			a.run_tests_1();
+			system("pause");
+			return 0;
+		}
+		if (strcmp(argv[i], "-2") == 0)
+		{
+			a.run_tests_2();
 			system("pause");
 			return 0;
 		}
