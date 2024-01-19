@@ -790,11 +790,11 @@ public:
 		read_data_from_file("rbg403.atsp");
 		run_limit = 180;
 		population_size = 800;
-		mutation_method = 0; 
+		mutation_method = 0;
 		for (int i = 0; i < 3; i++)
 		{
 			mutation_chance = mutations[i];
-			filename = std::to_string((int)(mutations[i]*100)) + "percent_swap.txt";
+			filename = std::to_string((int)(mutations[i] * 100)) + "percent_swap.txt";
 			delete genetic();
 			file.open(filename, std::fstream::out);
 			for (int i = 0; i < change_times.size(); i++)
@@ -837,6 +837,26 @@ public:
 		}
 
 		std::cout << "invert done!\n";
+	}
+
+	void run_tests_3()
+	{
+		std::cout << "running the custom-sized test...";
+		std::fstream file;
+		read_data_from_file("ftv170.atsp");
+		run_limit = 180;
+		population_size = 240;
+		mutation_method = 0;
+
+		delete genetic();
+		file.open("swap800rbgb358.txt", std::fstream::out);
+		for (int i = 0; i < change_times.size(); i++)
+		{
+			file << change_times[i] << "; "<< change_vals[i]<<"\n";
+		}
+		file.close();
+		change_times.clear();
+		change_vals.clear();
 
 	}
 };
@@ -857,6 +877,12 @@ int main(int argc, char* argv[])
 		if (strcmp(argv[i], "-2") == 0)
 		{
 			a.run_tests_2();
+			system("pause");
+			return 0;
+		}
+		if (strcmp(argv[i], "-3") == 0)
+		{
+			a.run_tests_3();
 			system("pause");
 			return 0;
 		}
